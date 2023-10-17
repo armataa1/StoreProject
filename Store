@@ -1,0 +1,112 @@
+public class Store {
+	private Register[] registers;
+	private int lost;
+	private int served;
+	private static final int NUM_REGS = 8;
+	private static final double SERVICE_TIME = 2.0;
+	private static double ARRIVAL_TIME;
+
+	public Store() {
+		registers = new Register[NUM_REGS];
+		for (int i = 0; i < NUM_REGS; i++) {
+			registers[i] = new Register(new LinkedQueue<>()); // Use LinkedQueue here
+		}
+		lost = 0;
+		served = 0;
+	}
+
+	public void update() {
+		// Update remaining times for customers and dequeue if remaining time <= 0
+		for (Register register : registers) {
+			QueueInterface<Customer> line = register.getQueue();
+			int queueSize = register.getLineLength();
+			for (int i = 0; i < queueSize; i++) {
+				Customer customer = line.dequeue();
+				customer.decreaseRemainingTime(ARRIVAL_TIME);
+				if (customer.getRemainingTime() <= 0) {
+					served++;
+				} else {
+					line.enqueue(customer);
+				}
+			}
+		}
+
+		// Find the register with the shortest line length and try to add a customer
+		int shortestLineLength = Integer.MAX_VALUE;
+		Register shortestRegister = null;
+		for (Register register : registers) {
+			int queueSize = register.getLineLength();
+			if (queueSize < shortestLineLength) {
+				shortestLineLength = queueSize;
+				shortestRegister = register;
+			}
+		}
+
+		// If a register is found and the line is not full, add a new customer with
+		// appropriate remaining time
+		if (shortestRegister != null) {
+			QueueInterface<Customer> line = shortestRegister.getQueue();
+			if (line.size() < 4) { // Check if the line is full (maximum of 4 customers per line)
+				double newRemainingTime = line.isEmpty() ? SERVICE_TIME : line.peek().getRemainingTime() + SERVICE_TIME;
+				line.enqueue(new Customer(newRemainingTime));
+			} else {
+				lost++;
+			}
+		}
+	}
+
+	public int getLost() {
+		return lost;
+	}
+
+	public int getServed() {
+		return served;
+	}
+
+	public static void main(String[] args) {
+		Store store = new Store();
+		ARRIVAL_TIME = 2; // Set the arrival time (value of t) as needed
+
+		// Simulate a 16-hour workday
+		int workdayMinutes = 16 * 60;
+		int customers = workdayMinutes / (int) ARRIVAL_TIME;
+		for (int i = 0; i < customers; i++) {
+			store.update();
+		}
+
+		System.out.println("Served customers: " + store.getServed());
+		System.out.println("Lost customers: " + store.getLost());
+	}
+}
+
+class Register {
+	private QueueInterface<Customer> queue;
+
+	public Register(QueueInterface<Customer> queue) {
+		this.queue = queue;
+	}
+
+	public QueueInterface<Customer> getQueue() {
+		return queue;
+	}
+
+	public int getLineLength() {
+		return queue.size();
+	}
+}
+
+class Customer {
+	private double remainingTime;
+
+	public Customer(double remainingTime) {
+		this.remainingTime = remainingTime;
+	}
+
+	public double getRemainingTime() {
+		return remainingTime;
+	}
+
+	public void decreaseRemainingTime(double time) {
+		remainingTime -= time;
+	}
+}
