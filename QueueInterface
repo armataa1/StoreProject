@@ -1,0 +1,11 @@
+public interface QueueInterface<T> {
+	void enqueue(T item);
+
+	T dequeue();
+
+	T peek(); // Add a peek() method
+
+	boolean isEmpty();
+
+	int size();
+}
